@@ -1,0 +1,52 @@
+# QuickBite Amazon EKS cluster definition.
+# Usage: eksctl create cluster -f infrastructure/eks/cluster.yaml
+# Set metadata.region and metadata.version before use. Choose a Kubernetes
+# version that is currently in EKS standard support.
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: quickbite
+  region: us-east-1
+  version: "1.34"
+  tags:
+    project: quickbite
+    environment: production
+
+iam:
+  withOIDC: true
+
+vpc:
+  nat:
+    gateway: Single
+  clusterEndpoints:
+    publicAccess: true
+    privateAccess: true
+
+addons:
+  - name: vpc-cni
+    configurationValues: '{"enableNetworkPolicy": "true"}'
+  - name: coredns
+  - name: kube-proxy
+  - name: aws-ebs-csi-driver
+    wellKnownPolicies:
+      ebsCSIController: true
+
+managedNodeGroups:
+  - name: quickbite-workers
+    instanceType: t3.large
+    amiFamily: AmazonLinux2023
+    minSize: 3
+    desiredCapacity: 3
+    maxSize: 6
+    volumeSize: 50
+    volumeEncrypted: true
+    privateNetworking: true
+    labels:
+      workload: quickbite
+    tags:
+      project: quickbite
+
+cloudWatch:
+  clusterLogging:
+    enableTypes: ["api", "audit", "authenticator"]

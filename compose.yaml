@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: quickbite
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only}
+      POSTGRES_DB: quickbite
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U quickbite"]
+      interval: 5s
+      retries: 15
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+  restaurant-api:
+    build: ./services/restaurant-api
+    environment:
+      DATABASE_URL: postgres://quickbite:${POSTGRES_PASSWORD:-local-dev-only}@postgres:5432/quickbite
+    depends_on:
+      postgres:
+        condition: service_healthy
+  orders-api:
+    build: ./services/orders-api
+    environment:
+      DATABASE_URL: postgres://quickbite:${POSTGRES_PASSWORD:-local-dev-only}@postgres:5432/quickbite
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+  notification-worker:
+    build: ./services/notification-worker
+    environment:
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - redis
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - restaurant-api
+      - orders-api
+volumes:
+  pgdata:
+  redisdata:

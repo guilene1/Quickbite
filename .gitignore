@@ -1,0 +1,10 @@
+node_modules/
+.env
+.DS_Store
+
+# Credentials and generated key material must never be committed
+*.key
+*.pem
+tls.crt
+*secret*.yaml
+iam_policy.json
