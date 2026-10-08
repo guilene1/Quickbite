@@ -1,5 +1,525 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>QuickBite | Food delivered beautifully</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet"><style>
-:root{font-family:'DM Sans',sans-serif;color:#17212c;background:#fffaf5}*{box-sizing:border-box}body{margin:0}button,input{font:inherit}button{cursor:pointer}.top{display:flex;justify-content:space-between;align-items:center;padding:18px max(5vw,24px);background:white;position:sticky;top:0;z-index:3;box-shadow:0 3px 24px #1e1b1908}.brand{font-family:Outfit;font-size:29px;font-weight:800;letter-spacing:-1.5px}.brand span,.accent{color:#ef442d}.nav{display:flex;gap:30px;color:#5e6873;font-weight:700;font-size:14px}.cartbtn,.primary{border:0;border-radius:12px;background:#f04b32;color:white;padding:13px 22px;font-weight:800}.hero{min-height:440px;display:flex;align-items:center;position:relative;overflow:hidden;background:linear-gradient(105deg,#fff6e9 0%,#fff2e1 48%,#ffe0c2 100%)}.hero:after{content:'';position:absolute;right:-120px;top:-150px;width:700px;height:700px;background:radial-gradient(circle,#ffc680 0%,#ffab5d 30%,transparent 66%);opacity:.6}.heroContent{position:relative;z-index:1;padding:70px max(5vw,24px);max-width:710px}.eyebrow{display:inline-block;background:#ffe1d9;color:#dd422b;border-radius:99px;padding:8px 15px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px}h1,h2,h3{font-family:Outfit;margin:0}h1{font-size:clamp(43px,5vw,76px);line-height:1.03;letter-spacing:-2.5px;margin:20px 0}p{color:#64707d;line-height:1.6}.hero p{font-size:17px;max-width:480px}.heroEmoji{position:absolute;right:8%;top:18%;font-size:clamp(130px,18vw,260px);z-index:1;filter:drop-shadow(0 28px 28px #a4492544);transform:rotate(-12deg)}main{max-width:1300px;margin:auto;padding:50px 24px}.sectionHead{display:flex;justify-content:space-between;align-items:center;margin:0 0 22px}.sectionHead h2{font-size:32px}.sectionHead p{margin:5px 0}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}.restaurant{border:1px solid #eee6dc;border-radius:20px;overflow:hidden;background:white;box-shadow:0 12px 35px #49392d0b;transition:transform .2s}.restaurant:hover{transform:translateY(-4px)}.foodArt{height:160px;display:grid;place-items:center;background:linear-gradient(135deg,#ffcf8c,#f7a363);font-size:94px}.restaurant:nth-child(2n) .foodArt{background:linear-gradient(135deg,#ffe3c5,#ffbdad)}.restaurant:nth-child(3n) .foodArt{background:linear-gradient(135deg,#d6efd5,#a6d7ae)}.details{padding:20px}.details h3{font-size:21px}.details p{margin:6px 0 15px;font-size:14px}.tag{font-size:12px;color:#e64c34;font-weight:800;background:#fff0eb;padding:7px 10px;border-radius:7px}.menu{margin-top:45px}.menuItems{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.menuItem{display:flex;justify-content:space-between;align-items:center;background:white;border:1px solid #eee6dc;padding:16px;border-radius:14px;gap:12px}.menuItem strong{display:block}.menuItem small{color:#64707d}.add{background:#182333;color:white;border:0;border-radius:9px;padding:9px 13px}.panel{position:fixed;top:0;right:0;height:100vh;width:min(420px,100vw);background:white;box-shadow:-10px 0 60px #0002;z-index:10;padding:28px;overflow:auto;display:none}.panel.open{display:block}.panelHead{display:flex;justify-content:space-between;align-items:center}.close{border:0;background:#f2f3f5;border-radius:9px;padding:8px 12px}.cartrow{display:flex;justify-content:space-between;gap:8px;padding:16px 0;border-bottom:1px solid #eee}.field{width:100%;padding:14px;border:1px solid #ddd;border-radius:10px;margin:18px 0}.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#182333;color:white;border-radius:12px;padding:16px 24px;display:none;z-index:15}.footer{background:#182333;color:#fff;padding:35px 5vw;margin-top:60px}.footer p{color:#b9c1ca}@media(max-width:850px){.grid{grid-template-columns:repeat(2,1fr)}.heroEmoji{opacity:.25;right:-40px}.nav{display:none}}@media(max-width:540px){.grid,.menuItems{grid-template-columns:1fr}.heroContent{padding:55px 24px}.sectionHead h2{font-size:26px}}
-</style></head><body><header class="top"><div class="brand">🍽️ Quick<span>Bite</span></div><nav class="nav"><span>Home</span><span>Restaurants</span><span>How it works</span></nav><button class="cartbtn" onclick="toggleCart()">🛒 Cart <span id="count">0</span></button></header><section class="hero"><div class="heroContent"><span class="eyebrow">✦ Your cravings, delivered</span><h1>Good food.<br>Great mood.<br><span class="accent">Right to you.</span></h1><p>Discover local favorites, explore delicious menus, and order something wonderful in just a few clicks.</p><button class="primary" onclick="document.getElementById('restaurants').scrollIntoView({behavior:'smooth'})">Explore restaurants →</button></div><div class="heroEmoji">🥗</div></section><main><section id="restaurants"><div class="sectionHead"><div><h2>Something delicious awaits</h2><p>Handpicked favorites from kitchens you'll love</p></div><span class="tag">Fresh picks</span></div><div class="grid" id="restaurantsGrid"><p>Loading restaurants...</p></div></section><section class="menu" id="menuSection" hidden><div class="sectionHead"><div><h2 id="menuTitle">Menu</h2><p>Choose your favorites</p></div><button class="close" onclick="document.getElementById('menuSection').hidden=true">Close</button></div><div class="menuItems" id="menuItems"></div></section></main><footer class="footer"><div class="brand">🍽️ Quick<span>Bite</span></div><p>Delicious experiences, powered by Kubernetes. A simulated ordering demo with no real payments.</p></footer><aside class="panel" id="cartPanel"><div class="panelHead"><h2>Your order 🛍️</h2><button class="close" onclick="toggleCart()">✕</button></div><div id="cartItems"></div><h3 id="total">Total: $0.00</h3><input class="field" id="customerName" maxlength="100" placeholder="Your name"><button class="primary" style="width:100%" onclick="checkout()">Place order</button><p style="font-size:12px">Demo only. No payment details are collected.</p></aside><div class="toast" id="toast"></div><script>
-const art={burger:'🍔',sushi:'🍣',pasta:'🍝',tacos:'🌮',salad:'🥗',pizza:'🍕',fries:'🍟'};let cart=[];let restaurants=[];function toast(s){const e=document.getElementById('toast');e.textContent=s;e.style.display='block';setTimeout(()=>e.style.display='none',3800)}async function load(){try{const r=await fetch('/api/restaurants');if(!r.ok)throw Error();restaurants=await r.json();document.getElementById('restaurantsGrid').innerHTML=restaurants.map(x=>`<article class="restaurant"><div class="foodArt">${art[x.image]||'🍽️'}</div><div class="details"><h3>${x.name}</h3><p>${x.cuisine} · ${x.eta}</p><button class="primary" onclick="showMenu(${x.id})">View menu →</button></div></article>`).join('')}catch{document.getElementById('restaurantsGrid').innerHTML='<p>Restaurant service is unavailable. Please try again shortly.</p>'}}async function showMenu(id){try{const r=await fetch('/api/restaurants/'+id+'/menu');if(!r.ok)throw Error();const items=await r.json();document.getElementById('menuTitle').textContent=restaurants.find(x=>x.id===id).name+' Menu';document.getElementById('menuItems').innerHTML=items.map(x=>`<div class="menuItem"><div><strong>${art[x.image]||'🍽️'} ${x.name}</strong><small>${x.description}</small><p>$${Number(x.price).toFixed(2)}</p></div><button class="add" onclick="addItem(${x.id},'${x.name.replaceAll("'",'')} ',${Number(x.price)})">+ Add</button></div>`).join('');document.getElementById('menuSection').hidden=false;document.getElementById('menuSection').scrollIntoView({behavior:'smooth'})}catch{toast('Could not load menu')}}function addItem(id,name,price){let x=cart.find(x=>x.id===id);if(x)x.quantity++;else cart.push({id,name,price,quantity:1});renderCart();toast('Added to your cart')}function renderCart(){document.getElementById('count').textContent=cart.reduce((a,x)=>a+x.quantity,0);document.getElementById('cartItems').innerHTML=cart.length?cart.map(x=>`<div class="cartrow"><span>${x.quantity} × ${x.name}</span><strong>$${(x.price*x.quantity).toFixed(2)}</strong></div>`).join(''):'<p>Your cart is empty.</p>';document.getElementById('total').textContent='Total: $'+cart.reduce((a,x)=>a+x.quantity*x.price,0).toFixed(2)}function toggleCart(){document.getElementById('cartPanel').classList.toggle('open');renderCart()}async function checkout(){const name=document.getElementById('customerName').value.trim();if(!name||!cart.length)return toast('Add food and enter your name');try{const r=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer_name:name,items:cart.map(x=>({id:x.id,quantity:x.quantity}))})});if(!r.ok)throw Error();const order=await r.json();cart=[];renderCart();toggleCart();toast('Order #'+order.id+' confirmed! 🎉')}catch{toast('Order service unavailable. Please try again.')}}load();
-</script></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>QuickBite | Food delivered beautifully</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        font-family: "DM Sans", sans-serif;
+        color: #17212c;
+        background: #fffaf5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+      }
+      button,
+      input {
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18px max(5vw, 24px);
+        background: white;
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        box-shadow: 0 3px 24px #1e1b1908;
+      }
+      .brand {
+        font-family: Outfit;
+        font-size: 29px;
+        font-weight: 800;
+        letter-spacing: -1.5px;
+      }
+      .brand span,
+      .accent {
+        color: #ef442d;
+      }
+      .nav {
+        display: flex;
+        gap: 30px;
+        color: #5e6873;
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .cartbtn,
+      .primary {
+        border: 0;
+        border-radius: 12px;
+        background: #f04b32;
+        color: white;
+        padding: 13px 22px;
+        font-weight: 800;
+      }
+      .hero {
+        min-height: 440px;
+        display: flex;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(
+          105deg,
+          #fff6e9 0%,
+          #fff2e1 48%,
+          #ffe0c2 100%
+        );
+      }
+      .hero:after {
+        content: "";
+        position: absolute;
+        right: -120px;
+        top: -150px;
+        width: 700px;
+        height: 700px;
+        background: radial-gradient(
+          circle,
+          #ffc680 0%,
+          #ffab5d 30%,
+          transparent 66%
+        );
+        opacity: 0.6;
+      }
+      .heroContent {
+        position: relative;
+        z-index: 1;
+        padding: 70px max(5vw, 24px);
+        max-width: 710px;
+      }
+      .eyebrow {
+        display: inline-block;
+        background: #ffe1d9;
+        color: #dd422b;
+        border-radius: 99px;
+        padding: 8px 15px;
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      h1,
+      h2,
+      h3 {
+        font-family: Outfit;
+        margin: 0;
+      }
+      h1 {
+        font-size: clamp(43px, 5vw, 76px);
+        line-height: 1.03;
+        letter-spacing: -2.5px;
+        margin: 20px 0;
+      }
+      p {
+        color: #64707d;
+        line-height: 1.6;
+      }
+      .hero p {
+        font-size: 17px;
+        max-width: 480px;
+      }
+      .heroEmoji {
+        position: absolute;
+        right: 8%;
+        top: 18%;
+        font-size: clamp(130px, 18vw, 260px);
+        z-index: 1;
+        filter: drop-shadow(0 28px 28px #a4492544);
+        transform: rotate(-12deg);
+      }
+      main {
+        max-width: 1300px;
+        margin: auto;
+        padding: 50px 24px;
+      }
+      .sectionHead {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 0 0 22px;
+      }
+      .sectionHead h2 {
+        font-size: 32px;
+      }
+      .sectionHead p {
+        margin: 5px 0;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 22px;
+      }
+      .restaurant {
+        border: 1px solid #eee6dc;
+        border-radius: 20px;
+        overflow: hidden;
+        background: white;
+        box-shadow: 0 12px 35px #49392d0b;
+        transition: transform 0.2s;
+      }
+      .restaurant:hover {
+        transform: translateY(-4px);
+      }
+      .foodArt {
+        height: 160px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, #ffcf8c, #f7a363);
+        font-size: 94px;
+      }
+      .restaurant:nth-child(2n) .foodArt {
+        background: linear-gradient(135deg, #ffe3c5, #ffbdad);
+      }
+      .restaurant:nth-child(3n) .foodArt {
+        background: linear-gradient(135deg, #d6efd5, #a6d7ae);
+      }
+      .details {
+        padding: 20px;
+      }
+      .details h3 {
+        font-size: 21px;
+      }
+      .details p {
+        margin: 6px 0 15px;
+        font-size: 14px;
+      }
+      .tag {
+        font-size: 12px;
+        color: #e64c34;
+        font-weight: 800;
+        background: #fff0eb;
+        padding: 7px 10px;
+        border-radius: 7px;
+      }
+      .menu {
+        margin-top: 45px;
+      }
+      .menuItems {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+      .menuItem {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: white;
+        border: 1px solid #eee6dc;
+        padding: 16px;
+        border-radius: 14px;
+        gap: 12px;
+      }
+      .menuItem strong {
+        display: block;
+      }
+      .menuItem small {
+        color: #64707d;
+      }
+      .add {
+        background: #182333;
+        color: white;
+        border: 0;
+        border-radius: 9px;
+        padding: 9px 13px;
+      }
+      .panel {
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 100vh;
+        width: min(420px, 100vw);
+        background: white;
+        box-shadow: -10px 0 60px #0002;
+        z-index: 10;
+        padding: 28px;
+        overflow: auto;
+        display: none;
+      }
+      .panel.open {
+        display: block;
+      }
+      .panelHead {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .close {
+        border: 0;
+        background: #f2f3f5;
+        border-radius: 9px;
+        padding: 8px 12px;
+      }
+      .cartrow {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 16px 0;
+        border-bottom: 1px solid #eee;
+      }
+      .field {
+        width: 100%;
+        padding: 14px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        margin: 18px 0;
+      }
+      .toast {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #182333;
+        color: white;
+        border-radius: 12px;
+        padding: 16px 24px;
+        display: none;
+        z-index: 15;
+      }
+      .footer {
+        background: #182333;
+        color: #fff;
+        padding: 35px 5vw;
+        margin-top: 60px;
+      }
+      .footer p {
+        color: #b9c1ca;
+      }
+      @media (max-width: 850px) {
+        .grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .heroEmoji {
+          opacity: 0.25;
+          right: -40px;
+        }
+        .nav {
+          display: none;
+        }
+      }
+      @media (max-width: 540px) {
+        .grid,
+        .menuItems {
+          grid-template-columns: 1fr;
+        }
+        .heroContent {
+          padding: 55px 24px;
+        }
+        .sectionHead h2 {
+          font-size: 26px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">🍽️ Quick<span>Bite</span></div>
+      <nav class="nav">
+        <span>Home</span><span>Restaurants</span><span>How it works</span>
+      </nav>
+      <button class="cartbtn" onclick="toggleCart()">
+        🛒 Cart <span id="count">0</span>
+      </button>
+    </header>
+    <section class="hero">
+      <div class="heroContent">
+        <span class="eyebrow">✦ Your cravings, delivered</span>
+        <h1>
+          Good food.<br />Great mood.<br /><span class="accent"
+            >Right to you.</span
+          >
+        </h1>
+        <p>
+          Discover local favorites, explore delicious menus, and order something
+          wonderful in just a few clicks.
+        </p>
+        <button
+          class="primary"
+          onclick="
+            document
+              .getElementById('restaurants')
+              .scrollIntoView({ behavior: 'smooth' })
+          "
+        >
+          Explore restaurants →
+        </button>
+      </div>
+      <div class="heroEmoji">🥗</div>
+    </section>
+    <main>
+      <section id="restaurants">
+        <div class="sectionHead">
+          <div>
+            <h2>Something delicious awaits</h2>
+            <p>Handpicked favorites from kitchens you'll love</p>
+          </div>
+          <span class="tag">Fresh picks</span>
+        </div>
+        <div class="grid" id="restaurantsGrid">
+          <p>Loading restaurants...</p>
+        </div>
+      </section>
+      <section class="menu" id="menuSection" hidden>
+        <div class="sectionHead">
+          <div>
+            <h2 id="menuTitle">Menu</h2>
+            <p>Choose your favorites</p>
+          </div>
+          <button
+            class="close"
+            onclick="document.getElementById('menuSection').hidden = true"
+          >
+            Close
+          </button>
+        </div>
+        <div class="menuItems" id="menuItems"></div>
+      </section>
+    </main>
+    <footer class="footer">
+      <div class="brand">🍽️ Quick<span>Bite</span></div>
+      <p>
+        Delicious experiences, powered by Kubernetes. A simulated ordering demo
+        with no real payments.
+      </p>
+    </footer>
+    <aside class="panel" id="cartPanel">
+      <div class="panelHead">
+        <h2>Your order 🛍️</h2>
+        <button class="close" onclick="toggleCart()">✕</button>
+      </div>
+      <div id="cartItems"></div>
+      <h3 id="total">Total: $0.00</h3>
+      <input
+        class="field"
+        id="customerName"
+        maxlength="100"
+        placeholder="Your name"
+      /><button class="primary" style="width: 100%" onclick="checkout()">
+        Place order
+      </button>
+      <p style="font-size: 12px">
+        Demo only. No payment details are collected.
+      </p>
+    </aside>
+    <div class="toast" id="toast"></div>
+    <script>
+      const art = {
+        burger: "🍔",
+        sushi: "🍣",
+        pasta: "🍝",
+        tacos: "🌮",
+        salad: "🥗",
+        pizza: "🍕",
+        fries: "🍟",
+      };
+      let cart = [];
+      let restaurants = [];
+      function toast(s) {
+        const e = document.getElementById("toast");
+        e.textContent = s;
+        e.style.display = "block";
+        setTimeout(() => (e.style.display = "none"), 3800);
+      }
+      async function load() {
+        try {
+          const r = await fetch("/api/restaurants");
+          if (!r.ok) throw Error();
+          restaurants = await r.json();
+          document.getElementById("restaurantsGrid").innerHTML = restaurants
+            .map(
+              (x) =>
+                `<article class="restaurant"><div class="foodArt">${art[x.image] || "🍽️"}</div><div class="details"><h3>${x.name}</h3><p>${x.cuisine} · ${x.eta}</p><button class="primary" onclick="showMenu(${x.id})">View menu →</button></div></article>`,
+            )
+            .join("");
+        } catch {
+          document.getElementById("restaurantsGrid").innerHTML =
+            "<p>Restaurant service is unavailable. Please try again shortly.</p>";
+        }
+      }
+      async function showMenu(id) {
+        try {
+          const r = await fetch("/api/restaurants/" + id + "/menu");
+          if (!r.ok) throw Error();
+          const items = await r.json();
+          document.getElementById("menuTitle").textContent =
+            restaurants.find((x) => x.id === id).name + " Menu";
+          document.getElementById("menuItems").innerHTML = items
+            .map(
+              (x) =>
+                `<div class="menuItem"><div><strong>${art[x.image] || "🍽️"} ${x.name}</strong><small>${x.description}</small><p>$${Number(x.price).toFixed(2)}</p></div><button class="add" onclick="addItem(${x.id},'${x.name.replaceAll("'", "")} ',${Number(x.price)})">+ Add</button></div>`,
+            )
+            .join("");
+          document.getElementById("menuSection").hidden = false;
+          document
+            .getElementById("menuSection")
+            .scrollIntoView({ behavior: "smooth" });
+        } catch {
+          toast("Could not load menu");
+        }
+      }
+      function addItem(id, name, price) {
+        let x = cart.find((x) => x.id === id);
+        if (x) x.quantity++;
+        else cart.push({ id, name, price, quantity: 1 });
+        renderCart();
+        toast("Added to your cart");
+      }
+      function renderCart() {
+        document.getElementById("count").textContent = cart.reduce(
+          (a, x) => a + x.quantity,
+          0,
+        );
+        document.getElementById("cartItems").innerHTML = cart.length
+          ? cart
+              .map(
+                (x) =>
+                  `<div class="cartrow"><span>${x.quantity} × ${x.name}</span><strong>$${(x.price * x.quantity).toFixed(2)}</strong></div>`,
+              )
+              .join("")
+          : "<p>Your cart is empty.</p>";
+        document.getElementById("total").textContent =
+          "Total: $" +
+          cart.reduce((a, x) => a + x.quantity * x.price, 0).toFixed(2);
+      }
+      function toggleCart() {
+        document.getElementById("cartPanel").classList.toggle("open");
+        renderCart();
+      }
+      async function checkout() {
+        const name = document.getElementById("customerName").value.trim();
+        if (!name || !cart.length) return toast("Add food and enter your name");
+        try {
+          const r = await fetch("/api/orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              customer_name: name,
+              items: cart.map((x) => ({ id: x.id, quantity: x.quantity })),
+            }),
+          });
+          if (!r.ok) throw Error();
+          const order = await r.json();
+          cart = [];
+          renderCart();
+          toggleCart();
+          toast("Order #" + order.id + " confirmed! 🎉");
+        } catch {
+          toast("Order service unavailable. Please try again.");
+        }
+      }
+      load();
+    </script>
+  </body>
+</html>

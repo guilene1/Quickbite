@@ -8,3 +8,7 @@ node_modules/
 tls.crt
 *secret*.yaml
 iam_policy.json
+
+# Office lock files
+.~lock.*#
+~$*
