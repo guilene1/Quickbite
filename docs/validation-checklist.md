@@ -100,7 +100,7 @@ export CURL="curl -sk --connect-to ${APP_HOST}:443:${LB_HOST}:443"
 | 8.2 | HPA scales out | Load test (guide Step 14) | `restaurant-api` replicas increase above 2 |
 | 8.3 | HPA scales in | Wait about 5 minutes after the load stops | Replicas return to 2 |
 | 8.4 | PDBs active | `kubectl -n quickbite get pdb` | `ALLOWED DISRUPTIONS` is 1 or more for each PDB |
-| 8.5 | Node drain without outage | Drain a node (guide Step 15) while polling `/healthz` | No failed frontend health requests |
+| 8.5 | Node drain without outage | Drain a node that runs an `orders-api` replica but neither `postgres-0` nor `redis-0` (guide Step 15) while polling `/healthz` and `/api/restaurants` | No failed requests; node uncordoned afterwards |
 | 8.6 | Self-healing | `kubectl -n quickbite delete pod -l app.kubernetes.io/name=restaurant-api --wait=false` | Replacements become ready, API keeps serving |
 | 8.7 | Rolling update without downtime | `kubectl -n quickbite rollout restart deploy/orders-api` while placing orders | All orders return 201 |
 
@@ -122,7 +122,7 @@ The deployment is accepted when **all** of the following are true:
 2. A customer can browse restaurants, view menus, and place an order at `https://<APP_HOST>`, and the order is persisted and produces a notification log entry.
 3. The administrative order listing is reachable only through `kubectl port-forward`, never through the public endpoint.
 4. No credential exists in the repository, in a ConfigMap, or in a container image layer.
-5. The application stays available while a worker node is drained and while any API Deployment is restarted.
+5. The application stays available while a worker node that hosts no data tier Pod is drained and while any API Deployment is restarted. Maintenance of the nodes that host `postgres-0` and `redis-0` is planned in a maintenance window (guide Step 15).
 6. Data survives deletion of the `postgres-0` and `redis-0` Pods.
 7. All manifests are committed under `kubernetes/` in the documented layout, and `kubectl apply` of the full directory on a fresh namespace (after the Secrets are created) reproduces the deployment.
 8. Known exceptions (for example the root Nginx master process) are recorded together with a planned remediation.

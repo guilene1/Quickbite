@@ -86,7 +86,7 @@ Request flow:
 
 | Component | Source | Container port | Health endpoints | Kubernetes workload |
 |---|---|---:|---|---|
-| frontend | `frontend/` (Nginx 1.27, static HTML) | 8080 | `GET /healthz` returns `ok` | Deployment |
+| frontend | `frontend/` (Nginx 1.28, static HTML) | 8080 | `GET /healthz` returns `ok` | Deployment |
 | restaurant-api | `services/restaurant-api/` (Node.js 22) | 3001 | `GET /healthz` (liveness), `GET /readyz` (checks PostgreSQL) | Deployment |
 | orders-api | `services/orders-api/` (Node.js 22) | 3002 | `GET /healthz` (liveness), `GET /readyz` (checks PostgreSQL and Redis) | Deployment |
 | notification-worker | `services/notification-worker/` (Node.js 22) | none | none (no HTTP listener) | Deployment |
@@ -219,5 +219,7 @@ The deployment must implement the following Kubernetes objects. The guide define
 - **No end-user authentication.** The storefront and order API are anonymous. The administrative `GET /api/orders` endpoint must be blocked at the public edge (see Step 7 of the deployment guide).
 - **At-most-once notifications.** The worker uses Redis `BRPOP`. A message is removed from the queue when it is read, so a worker crash during processing loses that notification. Use an acknowledgement-based queue (for example Redis Streams with consumer groups, or Amazon SQS) if delivery guarantees are required.
 - **Self-managed data tier.** PostgreSQL and Redis run in-cluster to demonstrate StatefulSets and persistent volumes. For production workloads, consider Amazon RDS for PostgreSQL and Amazon ElastiCache.
+- **Single-replica data tier.** `postgres` and `redis` each run one replica on a zonal EBS volume and have no PodDisruptionBudget. Draining the node that hosts either Pod, or losing its Availability Zone, makes the application unavailable until the Pod runs again in the same zone. Node maintenance for these nodes is planned in a maintenance window (see Step 15 of the deployment guide). Remediation: a replicated, Multi-AZ data tier such as Amazon RDS Multi-AZ and Amazon ElastiCache.
+- **Root Nginx master process.** The frontend uses the stock `nginx:1.28-alpine` image, whose master process runs as root, so `runAsNonRoot` cannot be enforced for the frontend. The container drops all capabilities and adds back only `CHOWN`, `SETGID`, and `SETUID`, which Nginx needs to prepare its cache directories and start its workers as the `nginx` user. This is a known exception to the `restricted` Pod Security Standard. Remediation: rebuild the frontend on `nginxinc/nginx-unprivileged`, which runs as a non-root user without added capabilities.
 - **No automated test suite.** The repository includes no unit or integration tests. Validation is performed with the documented checklist.
 - **Out of scope for Part 1.** GitHub Actions, Argo CD, and other automated delivery tooling are covered in Part 2.

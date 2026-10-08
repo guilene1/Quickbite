@@ -1,14 +1,18 @@
 # QuickBite Amazon EKS cluster definition.
 # Usage: eksctl create cluster -f infrastructure/eks/cluster.yaml
 # Set metadata.region and metadata.version before use. Choose a Kubernetes
-# version that is currently in EKS standard support.
+# version that is currently in EKS standard support:
+#   aws eks describe-cluster-versions \
+#     --query "clusterVersions[?status=='STANDARD_SUPPORT'].clusterVersion"
+# 1.36 is in standard support until August 2027. 1.34 leaves standard
+# support on December 2, 2026.
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
   name: quickbite
   region: us-east-1
-  version: "1.34"
+  version: "1.36"
   tags:
     project: quickbite
     environment: production

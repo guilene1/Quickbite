@@ -222,7 +222,14 @@ The cluster definition is in [`infrastructure/eks/cluster.yaml`](../infrastructu
 - Installs the `aws-ebs-csi-driver` add-on with an IRSA role.
 - Enables control plane logging for the API server, audit, and authenticator logs.
 
-Review the file and set `metadata.region` and `metadata.version`. Choose a Kubernetes version that is in EKS standard support.
+Review the file and set `metadata.region` and `metadata.version`. Choose a Kubernetes version that is in EKS standard support. The file uses Kubernetes `1.36`, which is in standard support until August 2027. Do not use `1.34`: it leaves EKS standard support on December 2, 2026, after which the cluster is billed for extended support.
+
+List the versions that are currently in standard support:
+
+```bash
+aws eks describe-cluster-versions \
+  --query "clusterVersions[?status=='STANDARD_SUPPORT'].clusterVersion"
+```
 
 **Commands:**
 
@@ -255,8 +262,11 @@ All `kube-system` Pods are `Running`, and the nodes are spread across more than 
 
 #### 4.1 Metrics Server
 
+Pin the release so that every installation is reproducible:
+
 ```bash
-kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+export METRICS_SERVER_VERSION=v0.9.0
+kubectl apply -f "https://github.com/kubernetes-sigs/metrics-server/releases/download/${METRICS_SERVER_VERSION}/components.yaml"
 kubectl -n kube-system rollout status deployment/metrics-server --timeout=180s
 kubectl top nodes
 ```
@@ -265,9 +275,12 @@ kubectl top nodes
 
 #### 4.2 AWS Load Balancer Controller
 
+Download the IAM policy from the release tag of the controller version you install, not from the `main` branch. The tag must match the `APP VERSION` of the Helm chart. Check it with `helm search repo eks/aws-load-balancer-controller` after you add the `eks` repository below.
+
 ```bash
+export LBC_VERSION=v3.6.0
 curl -fsSL -o iam_policy.json \
-  https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json
+  "https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/${LBC_VERSION}/docs/install/iam_policy.json"
 
 aws iam create-policy \
   --policy-name AWSLoadBalancerControllerIAMPolicy \
@@ -305,10 +318,10 @@ If the policy already exists in the account, skip `aws iam create-policy`.
 
 This guide uses **Envoy Gateway** as the reference Gateway API implementation. Its Helm chart installs the standard Gateway API CRDs. If your organization standardizes on a different conformant implementation (for example the AWS Load Balancer Controller's Gateway API support, NGINX Gateway Fabric, or Istio), install it according to its documentation. Then adjust the `GatewayClass`, the proxy namespace in the NetworkPolicies, and the load balancer settings to match.
 
-Check the [Envoy Gateway releases](https://github.com/envoyproxy/gateway/releases) page for the current stable version, then install it:
+This guide pins Envoy Gateway `v1.9.1`. Envoy Gateway v1.9 supports Kubernetes 1.33 to 1.36 and bundles Gateway API v1.6.1. If you choose a different version, confirm in the [Envoy Gateway compatibility matrix](https://gateway.envoyproxy.io/news/releases/matrix/) that it supports your cluster's Kubernetes version.
 
 ```bash
-export ENVOY_GATEWAY_VERSION=v1.5.0   # replace with the current stable release
+export ENVOY_GATEWAY_VERSION=v1.9.1
 
 helm install eg oci://docker.io/envoyproxy/gateway-helm \
   --version "$ENVOY_GATEWAY_VERSION" \
@@ -321,8 +334,9 @@ kubectl get crd gateways.gateway.networking.k8s.io httproutes.gateway.networking
 If you use an implementation that does not bundle the CRDs, install the standard channel CRDs first:
 
 ```bash
+export GATEWAY_API_VERSION=v1.6.1
 kubectl apply --server-side -f \
-  https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.3.0/standard-install.yaml
+  "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
 ```
 
 **Expected result:** The `envoy-gateway` Deployment is `Available`, and the Gateway API CRDs exist.
@@ -404,7 +418,20 @@ Review any `CRITICAL` or `HIGH` findings before you deploy.
 2. Create one ServiceAccount per workload: `frontend`, `restaurant-api`, `orders-api`, `notification-worker`, `postgres`, `redis`, and `db-jobs` (shared by the Job and the CronJob).
 3. Set `automountServiceAccountToken: false` on every ServiceAccount. No QuickBite component calls the Kubernetes API.
 4. Create a Role `quickbite-readonly` in the `quickbite` namespace that:
-   - Grants `get`, `list`, and `watch` on `pods`, `pods/log`, `services`, `endpoints`, `configmaps`, `persistentvolumeclaims`, `events`, `deployments`, `replicasets`, `statefulsets`, `jobs`, `cronjobs`, `horizontalpodautoscalers`, `poddisruptionbudgets`, `networkpolicies`, `gateways`, and `httproutes`.
+   - Grants `get`, `list`, and `watch` on the resources below. List each resource under its correct API group. A rule that names a resource under the wrong group is accepted by the API server but grants nothing.
+
+     | API group | Resources |
+     |---|---|
+     | `""` (core) | `pods`, `pods/log`, `services`, `endpoints`, `configmaps`, `persistentvolumeclaims`, `events` |
+     | `apps` | `deployments`, `replicasets`, `statefulsets` |
+     | `batch` | `jobs`, `cronjobs` |
+     | `autoscaling` | `horizontalpodautoscalers` |
+     | `policy` | `poddisruptionbudgets` |
+     | `networking.k8s.io` | `networkpolicies` |
+     | `discovery.k8s.io` | `endpointslices` |
+     | `gateway.networking.k8s.io` | `gateways`, `httproutes` |
+
+     `endpointslices` is required because `kubectl get endpoints` is deprecated in Kubernetes 1.33 and later. Operations staff use `kubectl get endpointslices` instead.
    - Does **not** grant any access to `secrets`, and does not grant `pods/exec` or `pods/portforward`.
 5. Create a RoleBinding that binds `quickbite-readonly` to the Kubernetes group `quickbite-readonly`.
 
@@ -432,6 +459,7 @@ kubectl get namespace quickbite --show-labels
 kubectl -n quickbite get serviceaccounts
 kubectl -n quickbite auth can-i list pods      --as=ops-user --as-group=quickbite-readonly   # yes
 kubectl -n quickbite auth can-i get pods/log   --as=ops-user --as-group=quickbite-readonly   # yes
+kubectl -n quickbite auth can-i list endpointslices.discovery.k8s.io --as=ops-user --as-group=quickbite-readonly  # yes
 kubectl -n quickbite auth can-i get secrets    --as=ops-user --as-group=quickbite-readonly   # no
 kubectl -n quickbite auth can-i create pods/exec --as=ops-user --as-group=quickbite-readonly # no
 kubectl -n quickbite auth can-i delete pods    --as=ops-user --as-group=quickbite-readonly   # no
@@ -470,14 +498,21 @@ In Step 11, mount it into the frontend container at `/etc/nginx/conf.d/`, replac
 
 #### 7.3 Database Initialization ConfigMap
 
-Generate the ConfigMap directly from the repository file so that the SQL has a single source of truth:
+Generate the ConfigMap directly from the repository file so that the SQL has a single source of truth. `kubectl create configmap` does not add labels, so pipe the output through `kubectl label --local` to add the required labels:
 
 ```bash
 kubectl create configmap db-init-sql \
   --namespace quickbite \
   --from-file=init.sql=database/init.sql \
-  --dry-run=client -o yaml > kubernetes/02-config/db-init-sql-configmap.yaml
+  --dry-run=client -o yaml \
+  | kubectl label --local -f - -o yaml \
+      app.kubernetes.io/name=db-init-sql \
+      app.kubernetes.io/part-of=quickbite \
+      app.kubernetes.io/component=job \
+  > kubernetes/02-config/db-init-sql-configmap.yaml
 ```
+
+Regenerate the file whenever `database/init.sql` changes.
 
 #### 7.4 Database Secret
 
@@ -651,7 +686,7 @@ The count is still `6`.
 | `serviceAccountName` | The matching ServiceAccount from Step 6 |
 | Rolling update | `maxUnavailable: 0`, `maxSurge: 1` |
 | Spreading | `topologySpreadConstraints` on `topology.kubernetes.io/zone`, `maxSkew: 1`, `whenUnsatisfiable: ScheduleAnyway` |
-| Container security | `allowPrivilegeEscalation: false`, `capabilities.drop: ["ALL"]`, `seccompProfile.type: RuntimeDefault` |
+| Container security | `allowPrivilegeEscalation: false`, `capabilities.drop: ["ALL"]`, `seccompProfile.type: RuntimeDefault`. Exception: the frontend also needs `capabilities.add: ["CHOWN", "SETGID", "SETUID"]` (see the frontend requirements below). |
 
 **Per-component requirements:**
 
@@ -660,12 +695,17 @@ The count is still `6`.
 | frontend | 2 | 8080 | none | liveness and readiness `GET /healthz` on 8080 | 50m / 64Mi, 250m / 128Mi |
 | restaurant-api | 2 | 3001 | `DATABASE_URL` from Secret `quickbite-db`; `ALLOWED_ORIGIN` from ConfigMap `quickbite-config` | liveness `GET /healthz`, readiness `GET /readyz` on 3001 | 100m / 128Mi, 500m / 256Mi |
 | orders-api | 2 | 3002 | `DATABASE_URL` from Secret; `REDIS_URL` and `ALLOWED_ORIGIN` from ConfigMap | liveness `GET /healthz`, readiness `GET /readyz` on 3002 | 100m / 128Mi, 500m / 256Mi |
-| notification-worker | 1 | none | `REDIS_URL` from ConfigMap | none (no HTTP listener; the process exits if its initial Redis connection fails) | 50m / 64Mi, 250m / 128Mi |
+| notification-worker | 1 | none | `REDIS_URL` from ConfigMap | none (no HTTP listener). The process does not exit when Redis is unreachable: it retries the connection indefinitely, logs `Redis: ...` errors, and prints `QuickBite notification worker started` only once it is connected. | 50m / 64Mi, 250m / 128Mi |
 
 **Image-specific security requirements:**
 
 - **Node.js images** (`restaurant-api`, `orders-api`, `notification-worker`): The Dockerfiles set `USER node`, which is a user name, not a UID. Set `runAsNonRoot: true` **and** `runAsUser: 1000` explicitly. Without the numeric UID the kubelet cannot verify the user, and the Pod fails with `CreateContainerConfigError`. If you enable `readOnlyRootFilesystem: true`, mount an `emptyDir` at `/home/node/.npm`, because `npm start` writes log files there.
-- **frontend** (`nginx:1.27-alpine`): The stock Nginx image starts its master process as root, so `runAsNonRoot` cannot be enforced. Mount the ConfigMap `frontend-nginx` as a volume at `/etc/nginx/conf.d`. Record the root requirement as a known exception (see [Scope and Limitations](../README.md#scope-and-limitations)).
+- **frontend** (`nginx:1.28-alpine`): The stock Nginx image starts its master process as root, so `runAsNonRoot` cannot be enforced. The master process changes the ownership of its temporary directories and then starts the worker processes as the `nginx` user. With only `capabilities.drop: ["ALL"]`, these calls fail, and the container exits at startup with `Operation not permitted`. Set:
+  - `capabilities.drop: ["ALL"]` **and** `capabilities.add: ["CHOWN", "SETGID", "SETUID"]`
+  - an `emptyDir` volume mounted at `/var/cache/nginx`, which gives Nginx a fresh, writable directory for its temporary files without the `DAC_OVERRIDE` capability
+  - the ConfigMap `frontend-nginx` mounted as a volume at `/etc/nginx/conf.d`
+
+  Record the root requirement as a known exception (see [Scope and Limitations](../README.md#scope-and-limitations)). If you rebuild the frontend on the `nginxinc/nginx-unprivileged` image instead, it runs entirely as a non-root user and needs no added capabilities.
 
 **Services:** Create ClusterIP Services `frontend` (8080), `restaurant-api` (3001), and `orders-api` (3002). Name each port (for example `http`) and set `targetPort` to the container port. The worker has no Service.
 
@@ -784,8 +824,12 @@ Once DNS is in place, create a Route 53 alias (or CNAME) record from `APP_HOST` 
 
 1. `default-deny-all`: selects all Pods, `policyTypes: [Ingress, Egress]`, with no rules.
 2. `allow-dns-egress`: allows egress from all Pods to the `kube-system` namespace (`kubernetes.io/metadata.name: kube-system`) with label `k8s-app: kube-dns`, on 53/UDP and 53/TCP.
-3. One policy per flow in the [Network Traffic Matrix](#network-traffic-matrix). Each flow needs **both** an egress rule on the source and an ingress rule on the destination.
-4. Ingress to `frontend` from the Envoy proxy Pods must use a `namespaceSelector` on `kubernetes.io/metadata.name: envoy-gateway-system`. Do not use `0.0.0.0/0`.
+3. **Two policies for each in-namespace flow** in the [Network Traffic Matrix](#network-traffic-matrix). Under a default deny for both directions, a connection succeeds only when the source may send it and the destination may receive it. For each flow from `<src>` to `<dst>`, create:
+   - `allow-<src>-to-<dst>-egress`: selects the `<src>` Pods and allows egress to the `<dst>` Pods on the flow's port.
+   - `allow-<src>-to-<dst>-ingress`: selects the `<dst>` Pods and allows ingress from the `<src>` Pods on the same port.
+
+   For example, the flow from `frontend` to `restaurant-api` needs `allow-frontend-to-restaurant-api-egress` and `allow-frontend-to-restaurant-api-ingress`. The 8 in-namespace flows therefore need 16 policies.
+4. The flow from the Envoy proxy Pods to `frontend` needs only one policy, `allow-envoy-to-frontend-ingress`, because the Envoy Pods run in `envoy-gateway-system`, which is outside the default deny. It must use a `namespaceSelector` on `kubernetes.io/metadata.name: envoy-gateway-system`. Do not use `0.0.0.0/0`.
 5. Select Pods by the `app.kubernetes.io/name` label only. Add the same label to the Job and CronJob Pod templates (`db-init`, `postgres-backup`).
 
 **Commands:**
@@ -864,7 +908,7 @@ During the load test the `restaurant-api` replicas increase above 2. They return
 **Requirements:**
 
 1. Create PodDisruptionBudgets for `frontend`, `restaurant-api`, and `orders-api` with `minAvailable: 1`, selecting on `app.kubernetes.io/name`.
-2. Do not create a PDB for the single-replica `postgres` or `redis` StatefulSets with `minAvailable: 1`, because it would block every node drain indefinitely. Document how you plan the maintenance window for the data tier.
+2. Do not create a PDB for the single-replica `postgres` or `redis` StatefulSets with `minAvailable: 1`, because it would block every node drain indefinitely. Document how you plan the maintenance window for the data tier (see below).
 
 **Commands:**
 
@@ -877,14 +921,22 @@ kubectl -n quickbite get pdb
 
 **Checkpoint (drain test):**
 
+The cluster has one node per Availability Zone, and EBS volumes are zonal. If you drain the node that runs `postgres-0` or `redis-0`, the Pod cannot move to a node in another zone. It stays `Pending` (volume node affinity conflict), and the application is down until you uncordon the node. The PDBs protect only the replicated Deployments. Drain a node that runs an `orders-api` replica but neither `postgres-0` nor `redis-0`:
+
 ```bash
-NODE="$(kubectl -n quickbite get pod -l app.kubernetes.io/name=orders-api -o jsonpath='{.items[0].spec.nodeName}')"
+DATA_NODES="$(kubectl -n quickbite get pod postgres-0 redis-0 -o jsonpath='{.items[*].spec.nodeName}')"
+NODE="$(kubectl -n quickbite get pod -l app.kubernetes.io/name=orders-api -o jsonpath='{range .items[*]}{.spec.nodeName}{"\n"}{end}' | grep -vxF -e "${DATA_NODES% *}" -e "${DATA_NODES#* }" | head -n 1)"
+echo "Draining: ${NODE:?no node runs orders-api without a data tier Pod}"
 kubectl drain "$NODE" --ignore-daemonsets --delete-emptydir-data --timeout=300s
 kubectl -n quickbite get pods -o wide
 kubectl uncordon "$NODE"
 ```
 
-While the node drains, keep requesting `/healthz` and `/api/restaurants` through the Gateway. The requests keep succeeding (brief data tier unavailability is expected if `postgres-0` or `redis-0` ran on the drained node). The EBS volume is zonal, so a rescheduled `postgres-0` can only run on a node in the same Availability Zone.
+If `NODE` is empty, every `orders-api` replica shares a node with `postgres-0` or `redis-0`. Delete one `orders-api` Pod so that it is rescheduled, and try again.
+
+While the node drains, keep requesting `/healthz` and `/api/restaurants` through the Gateway. All requests keep succeeding.
+
+**Maintenance window for the data tier:** `postgres` and `redis` run as single replicas on zonal volumes, so draining their nodes always causes an outage. Plan node maintenance for these nodes (for example node group upgrades or AMI updates) in an announced maintenance window: take a fresh backup (Step 16), drain the node, upgrade or replace it in the same Availability Zone, uncordon it, and confirm that `postgres-0` and `redis-0` are ready and the smoke test from Step 17 passes. To remove this outage, use a replicated data tier such as Amazon RDS Multi-AZ and Amazon ElastiCache (see [Scope and Limitations](../README.md#scope-and-limitations)).
 
 ### Step 16: Backup CronJob
 

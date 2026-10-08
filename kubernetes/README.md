@@ -14,7 +14,7 @@ This directory holds the Kubernetes manifests for the QuickBite deployment on Am
 | `05-jobs/` | 10, 16 | `db-init-job.yaml`, `postgres-backup-cronjob.yaml` | Job, CronJob |
 | `06-apps/` | 11 | `<component>-deployment.yaml` and `<component>-service.yaml` for frontend, restaurant-api, orders-api; `notification-worker-deployment.yaml` | Deployment, Service |
 | `07-gateway/` | 12 | `envoyproxy.yaml`, `gatewayclass.yaml`, `gateway.yaml`, `httproute-redirect.yaml`, `httproute.yaml` | EnvoyProxy, GatewayClass, Gateway, HTTPRoute |
-| `08-network-policies/` | 13 | `default-deny-all.yaml`, `allow-dns-egress.yaml`, one file per allowed flow | NetworkPolicy |
+| `08-network-policies/` | 13 | `default-deny-all.yaml`, `allow-dns-egress.yaml`, and for each allowed flow inside the namespace an `allow-<source>-to-<destination>-egress.yaml` and `allow-<source>-to-<destination>-ingress.yaml` pair. The flow from Envoy needs only `allow-envoy-to-frontend-ingress.yaml`. | NetworkPolicy |
 | `09-autoscaling/` | 14 | `<component>-hpa.yaml` | HorizontalPodAutoscaler |
 | `10-availability/` | 15 | `<component>-pdb.yaml` | PodDisruptionBudget |
 
@@ -23,7 +23,7 @@ Secrets (`quickbite-db`, `quickbite-tls`) are created with `kubectl` and are **n
 ## Conventions
 
 - **Namespace:** Every namespaced resource sets `metadata.namespace: quickbite` explicitly. The only exception is the `EnvoyProxy` resource, which lives in `envoy-gateway-system`.
-- **One resource per file.** File names follow `<name>-<kind>.yaml`.
+- **One resource per file.** File names follow `<name>-<kind>.yaml`. The only allowed multi-resource file is `01-rbac/serviceaccounts.yaml`, which holds all seven ServiceAccounts separated by `---`.
 - **Labels:** Every resource and Pod template carries:
   ```yaml
   app.kubernetes.io/name: <component>

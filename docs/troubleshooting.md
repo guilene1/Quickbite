@@ -38,6 +38,7 @@ Read the `Events` section and the `State` / `Last State` fields of `kubectl desc
 | `kubectl drain` hangs | [17](#17-node-drain-is-blocked) |
 | Backup Job fails | [18](#18-backup-cronjob-fails) |
 | Pod `Pending` with volume affinity conflict | [19](#19-pod-pending-due-to-volume-node-affinity) |
+| frontend exits with `Operation not permitted` | [20](#20-frontend-fails-with-operation-not-permitted) |
 
 ## Scenarios
 
@@ -220,7 +221,7 @@ kubectl -n quickbite exec redis-0 -- redis-cli LLEN quickbite:notifications
 
 - `LLEN` greater than 0 and growing: The worker is not consuming. Check for `Redis:` or `Worker error:` lines, the worker's `REDIS_URL`, and the policy from the worker to redis.
 - `LLEN` is 0 and orders-api logs `Notification enqueue failed`: orders-api cannot write to Redis. The order is still saved, but the notification is lost.
-- Worker Pod restarting with exit code 1: The initial Redis connection failed. It recovers once Redis is reachable.
+- Worker log shows repeated `Redis: ...` errors (for example `Redis: connect ECONNREFUSED` or `Redis: getaddrinfo ENOTFOUND redis`) and no `QuickBite notification worker started` line: The worker cannot reach Redis. It does **not** exit or restart in this case. It retries the connection indefinitely and prints `QuickBite notification worker started` only once it is connected. Check `redis-0`, the worker's `REDIS_URL`, and the policies from the worker to redis (`allow-notification-worker-to-redis-egress` and `-ingress`). A `RESTARTS` count of 0 does not mean that the worker is connected.
 
 ### 12. Gateway Is Not Programmed
 
@@ -347,3 +348,47 @@ kubectl -n quickbite describe cronjob postgres-backup
 **Cause:** EBS volumes are zonal. The Pod's PVC is bound to a volume in an Availability Zone that has no schedulable node with enough capacity.
 
 **Resolution:** Make sure that each Availability Zone used by the node group has capacity. Uncordon nodes left cordoned after a drain, or scale the node group. Keep `WaitForFirstConsumer` on the StorageClass so new volumes are created in the Pod's zone.
+
+### 20. Frontend Fails with "Operation not permitted"
+
+**Symptom:** The frontend Pods are in `CrashLoopBackOff` or `Error`. The logs contain lines such as:
+
+```text
+[emerg] 1#1: chown("/var/cache/nginx/client_temp", 101) failed (1: Operation not permitted)
+```
+
+**Cause:** The stock `nginx` image starts its master process as root. The master changes the ownership of its temporary directories under `/var/cache/nginx` and then switches the worker processes to the `nginx` user. These calls need the `CHOWN`, `SETGID`, and `SETUID` capabilities. With `capabilities.drop: ["ALL"]` and nothing added back, the master process cannot perform them and exits.
+
+**Diagnose:**
+
+```bash
+kubectl -n quickbite logs deploy/frontend --previous --tail=20
+kubectl -n quickbite get deploy frontend -o jsonpath='{.spec.template.spec.containers[0].securityContext}'
+```
+
+**Resolution:** Add back only the three capabilities that Nginx needs, and give it a writable cache directory:
+
+```yaml
+spec:
+  template:
+    spec:
+      containers:
+        - name: frontend
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+              add: ["CHOWN", "SETGID", "SETUID"]
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+      volumes:
+        - name: nginx-cache
+          emptyDir: {}
+```
+
+The `emptyDir` gives Nginx a fresh, root-owned, writable cache directory, so the master process can create its temporary directories there without the `DAC_OVERRIDE` capability.
+
+**Alternative:** Build the frontend on `nginxinc/nginx-unprivileged` (for example `nginxinc/nginx-unprivileged:1.28-alpine`). It runs as UID 101, listens on port 8080 by default, and works with `runAsNonRoot: true` and `capabilities.drop: ["ALL"]` without added capabilities. This removes the root exception recorded in [Scope and Limitations](../README.md#scope-and-limitations).
