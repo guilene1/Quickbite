@@ -35,6 +35,8 @@ addons:
   - name: aws-ebs-csi-driver
     wellKnownPolicies:
       ebsCSIController: true
+  # Required by the HorizontalPodAutoscalers (Step 14).
+  - name: metrics-server
 
 managedNodeGroups:
   - name: quickbite-workers
